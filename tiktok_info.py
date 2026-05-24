@@ -11,7 +11,7 @@ import requests
 def get_tiktok_info(username):
     # تنظيف اسم المستخدم لو تم إدخال @
     username = username.replace("@", "")
-url = f"https://tiktok.com@{username}"
+    url = f"https://www.tiktok.com/@{username}"
     
     # إعدادات المتصفح ليعمل بشكل مخفي واحترافي
     chrome_options = Options()
@@ -57,16 +57,15 @@ url = f"https://tiktok.com@{username}"
             img_name = f"{username}_profile.jpg"
             with open(img_name, 'wb') as handler:
                 handler.write(img_data)
-            print(f"✅ تم حفظ صورة الحساب في مجلد السكربت باسم: {img_name}")
+            print(f"✅ تم حفظ صورة الحساب باسم: {img_name}")
 
     except Exception as e:
         print(f"❌ حدث خطأ أثناء جلب البيانات: {e}")
-        print("💡 تلميح: قد يكون الحساب خاصاً (Private) أو تيك توك يطلب اختبار أمان كابتشا.")
         
     finally:
         driver.quit()
 
-# تشغيل السكربت (ضع اسم أي حساب تريده هنا لتجربته)
+# تشغيل السكربت
 if __name__ == "__main__":
     account_to_check = input("أدخل اسم حساب التيك توك (بدون @): ")
     get_tiktok_info(account_to_check)
