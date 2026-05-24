@@ -1,78 +1,83 @@
-import time
-import os
-import urllib.parse
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+import streamlit as st
 import requests
+import json
 
-def get_tiktok_info(username):
-    # تنظيف اسم المستخدم
-    username = username.replace("@", "").strip()
-    url = f"https://www.tiktok.com/@{username}"
-    
-    # إعدادات المتصفح الخاصة بالسيرفرات (مهمة جداً لـ Streamlit Cloud)
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new") # تشغيل مخفي تماماً بدون شاشة
-    chrome_options.add_argument("--no-sandbox") # تجاوز حماية الـ Sandbox في لينكس
-    chrome_options.add_argument("--disable-dev-shm-usage") # لتفادي امتلاء ذاكرة السيرفر المؤقتة
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+# إعدادات الصفحة
+st.set_page_config(page_title="مستخرج بيانات تيك توك", page_icon="📊", layout="centered")
 
-    print(f"🔄 جاري تهيئة متصفح السيرفر وفحص حساب @{username}...")
-    
-    # تشغيل المتصفح بناءً على المسار المتوفر في سيرفر لينكس
-    try:
-        # محاولة التشغيل عبر النظام الافتراضي للسيرفر أولاً
-        driver = webdriver.Chrome(options=chrome_options)
-    except:
-        # حل احتياطي في حال تطلب مسار الخدمة المباشر
-        try:
-            from selenium.webdriver.chrome.service import Service
-            service = Service(executable_path="/usr/bin/chromedriver")
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-        except Exception as e:
-            print(f"❌ فشل تشغيل المتصفح على السيرفر: {e}")
-            return
+st.title("📊 مستخرج معلومات حسابات TikTok")
+st.markdown("أدخل اسم المستخدم بالأسفل لجلب معلومات الحساب وصورته الشخصية فوراً.")
+st.markdown("---")
 
-    try:
-        driver.get(url)
-        time.sleep(7) # زيادة وقت الانتظار للسيرفر لضمان تحميل الصفحة كاملاً
-        
-        # 1. استخراج الأرقام (متابعة، متابعين، تسجيلات الإعجاب)
-        following = driver.find_element(By.XPATH, '//strong[@data-e2e="following-count"]').text
-        followers = driver.find_element(By.XPATH, '//strong[@data-e2e="followers-count"]').text
-        likes = driver.find_element(By.XPATH, '//strong[@data-e2e="likes-count"]').text
-        
-        # 2. استخراج عدد الفيديوهات المنشورة
-        videos = driver.find_elements(By.XPATH, '//div[@data-e2e="user-post-item"]')
-        video_count = len(videos)
-        
-        # 3. استخراج رابط صورة الحساب الشخصية
-        img_element = driver.find_element(By.XPATH, '//img[contains(@class, "Avatar")]')
-        img_url = img_element.get_attribute("src")
-        
-        # طباعة البيانات في شاشة الكمبيوتر / السيرفر
-        print("\n" + "="*40)
-        print(f"📊 معلومات الحساب لـ @{username}:")
-        print("="*40)
-        print(f"👥 يتابع: {following}")
-        print(f"📢 المتابعون: {followers}")
-        print(f"❤️ إجمالي الإعجابات: {likes}")
-        print(f"🎬 عدد الفيديوهات الظاهرة في الصفحة: {video_count}")
-        print(f"🖼️ رابط الصورة الشخصية: {img_url}")
-        print("="*40)
-        
-    except Exception as e:
-        print(f"❌ حدث خطأ أثناء قراءة البيانات: {e}")
-        print("💡 تلميح: قد يكون الحساب خاصاً أو واجه الموقع كابتشا الحماية.")
-        
-    finally:
-        driver.quit()
+# خانة إدخال اسم المستخدم
+username = st.text_input("أدخل اسم حساب التيك توك (بدون @):", placeholder="مثال: khaby.lame")
 
-# تشغيل السكربت
-if __name__ == "__main__":
-    account_to_check = input("أدخل اسم حساب التيك توك (بدون @): ")
-    get_tiktok_info(account_to_check)
+if st.button("🔍 جلب البيانات الآن", use_container_width=True):
+    if username:
+        username = username.replace("@", "").strip()
+        
+        # استخدام نظام فحص سريع ومفتوح لجلب بيانات الحساب
+        api_url = f"https://www.tiktok.com/api/user/detail/?uniqueId={username}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        
+        with st.spinner("🔄 جاري الاتصال بتيك توك وجلب البيانات..."):
+            try:
+                # محاولة جلب البيانات عبر طلب مباشر
+                response = requests.get(api_url, headers=headers, timeout=10)
+                
+                # إذا تطلب الأمر وسيلة بديلة بسبب حماية تيك توك، نستخدم مكاناً بديلاً مفتوحاً
+                if response.status_code != 200 or "userInfo" not in response.text:
+                    # رابط بديل مجاني ومستقر لجلب نفس البيانات دون حظر
+                    backup_url = f"https://countik.com/api/userinfo?username={username}"
+                    response = requests.get(backup_url, headers=headers, timeout=10)
+                    data = response.json()
+                else:
+                    res_json = response.json()
+                    data = res_json.get("userInfo", {})
+
+                # التحقق من نجاح جلب البيانات
+                if data and ("followerCount" in str(data) or "stats" in data):
+                    st.success("✅ تم جلب بيانات الحساب بنجاح!")
+                    st.markdown("---")
+                    
+                    # ترتيب استخراج البيانات حسب نوع الـ API المستجيب
+                    stats = data.get("stats", data)
+                    user_info = data.get("user", data)
+                    
+                    # استخراج الأرقام
+                    followers = stats.get("followerCount", stats.get("followers", 0))
+                    following = stats.get("followingCount", stats.get("following", 0))
+                    hearts = stats.get("heartCount", stats.get("hearts", stats.get("likes", 0)))
+                    video_count = stats.get("videoCount", stats.get("videos", 0))
+                    
+                    # استخراج الصورة والاسم
+                    nickname = user_info.get("nickname", username)
+                    avatar = user_info.get("avatarLarger", user_info.get("avatar", "https://www.tiktok.com/favicon.ico"))
+
+                    # عرض البيانات للمستخدم بشكل احترافي بجانب بعضها
+                    col1, col2 = st.columns([1, 2])
+                    
+                    with col1:
+                        st.image(avatar, caption=f"صورة {nickname}", width=150)
+                        
+                    with col2:
+                        st.markdown(f"### 👤 الإسم: **{nickname}**")
+                        st.markdown(f"🔗 الرابط: [اضغط لزيارة الحساب](https://www.tiktok.com/@{username})")
+                        
+                        st.info(f"📢 **عدد المتابعين:** {followers:,}")
+                        st.info(f"👥 **يتابع:** {following:,}")
+                        st.info(f"❤️ **إجمالي الإعجابات:** {hearts:,}")
+                        st.info(f"🎬 **عدد الفيديوهات المنشورة:** {video_count:,}")
+                        
+                else:
+                    st.error("❌ لم نتمكن من العثور على الحساب. تأكد من كتابة الاسم بشكل صحيح، أو قد يكون الحساب خاصاً.")
+                    
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء الاتصال بالخادم: {e}")
+    else:
+        st.warning("⚠️ يرجى كتابة اسم المستخدم أولاً!")
+
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: #666;'>مركز فحص الحسابات الذكي © 2026</div>", unsafe_allow_html=True)
