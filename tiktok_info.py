@@ -53,7 +53,7 @@ if st.button("🔍 فحص حالة البث الآن", use_container_width=True)
                     status_box.success("🎯 [حساب نشط] تم اكتشاف البث المباشر الآن!")
                     
                     with result_box.container():
-                        st.markdown(### "🚨 الحساب يبث مباشر حالياً!")
+                        st.markdown("### 🚨 الحساب يبث مباشر حالياً!") # تم تصحيح السطر هنا
                         st.code(final_url, language="text")
                         
                         # زر نسخ ذكي يعمل داخل المتصفح للزائر مباشرة
