@@ -1,11 +1,12 @@
 import streamlit as st
 import requests
+import re
 
 # إعدادات الصفحة
-st.set_page_config(page_title="مستخرج بيانات تيك توك", page_icon="📊", layout="centered")
+st.set_page_config(page_title="مستخرج بيانات تيك توك الرسمي", page_icon="📊", layout="centered")
 
 st.title("📊 مستخرج معلومات حسابات TikTok")
-st.markdown("أدخل اسم المستخدم بالأسفل لجلب معلومات الحساب وصورته الشخصية فوراً.")
+st.markdown("أدخل اسم المستخدم بالأسفل لجلب معلومات الحساب وصورته الشخصية فوراً بدون حظر.")
 st.markdown("---")
 
 # خانة إدخال اسم المستخدم
@@ -13,37 +14,43 @@ username = st.text_input("أدخل اسم حساب التيك توك (بدون @
 
 if st.button("🔍 جلب البيانات الآن", use_container_width=True):
     if username:
-        username = username.replace("@", "").strip()
+        username = username.replace("@", "").strip().lower()
         
-        with st.spinner("🔄 جاري الاتصال الآمن وتخطي الحماية وجلب البيانات..."):
+        with st.spinner("🔄 جاري تخطي أنظمة الحماية وجلب البيانات الآمنة..."):
             try:
-                # استخدام API مفتوح ومستقر مخصص لجلب البيانات وتفادي حظر (line 1 column 1)
-                api_url = f"https://countik.com/api/userinfo?username={username}"
+                # طريقة متطورة: استخدام منصة قراءة بيانات مفتوحة ومحمية من الحظر
+                api_url = f"https://tokcount.com/api/user/info/{username}"
+                
+                # استخدام نظام Headers متطور جداً لتقليد متصفح حقيقي بالكامل
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "application/json"
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+                    "Accept": "application/json, text/plain, */*",
+                    "Accept-Language": "ar-XM,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Origin": "https://tokcount.com",
+                    "Referer": "https://tokcount.com/"
                 }
                 
                 response = requests.get(api_url, headers=headers, timeout=15)
                 
-                # التحقق أولاً أن السيرفر رد باستجابة صحيحة وليس صفحة خطأ
                 if response.status_code == 200:
                     data = response.json()
                     
-                    # التحقق من أن الحساب موجود ويحتوي على بيانات
-                    if data and "status" not in str(data) and "followers" in data:
-                        st.success("✅ تم جلب بيانات الحساب بنجاح!")
+                    # التحقق من وجود بيانات الحساب داخل استجابة السيرفر الجديد
+                    if data and "error" not in data and ("followers" in data or "data" in data):
+                        st.success("✅ تم جلب البيانات بنجاح تام!")
                         st.markdown("---")
                         
-                        # استخراج البيانات بدقة
-                        followers = data.get("followers", 0)
-                        following = data.get("following", 0)
-                        hearts = data.get("likes", 0)
-                        video_count = data.get("videos", 0)
-                        nickname = data.get("nickname", username)
-                        avatar = data.get("avatar", "https://www.tiktok.com/favicon.ico")
+                        # قراءة البيانات حسب هيكلة السيرفر الجديد الذكي
+                        user_data = data.get("data", data)
+                        
+                        followers = user_data.get("followers", user_data.get("followerCount", 0))
+                        following = user_data.get("following", user_data.get("followingCount", 0))
+                        hearts = user_data.get("likes", user_data.get("heartCount", 0))
+                        video_count = user_data.get("videos", user_data.get("videoCount", 0))
+                        nickname = user_data.get("nickname", user_data.get("username", username))
+                        avatar = user_data.get("avatar", "https://www.tiktok.com/favicon.ico")
 
-                        # عرض البيانات للمستخدم بشكل احترافي منسق
+                        # عرض البيانات للزوار
                         col1, col2 = st.columns([1, 2])
                         
                         with col1:
@@ -58,14 +65,29 @@ if st.button("🔍 جلب البيانات الآن", use_container_width=True):
                             st.info(f"❤️ **إجمالي الإعجابات:** {hearts:,}")
                             st.info(f"🎬 **عدد الفيديوهات المنشورة:** {video_count:,}")
                     else:
-                        st.error("❌ لم نتمكن من العثور على هذا الحساب. تأكد من كتابة الاسم بشكل صحيح (قد يكون الحساب تم تغييره أو حذفه).")
+                        st.error("❌ الحساب غير موجود أو قد يكون خاصاً ومحمياً من قِبل صاحبه.")
+                
+                # حل احتياطي فوري إذا رجع السيرفر بـ 403 أو فشل
                 else:
-                    st.error(f"⚠️ السيرفر مشغول حالياً، يرجى المحاولة مرة أخرى بعد ثوانٍ. (كود الخطأ: {response.status_code})")
+                    # نستخدم رابط بديل مجاني وسريع جداً مخصص للإحصائيات الحية
+                    fallback_url = f"https://api.ttcounts.com/user/info/{username}"
+                    fallback_resp = requests.get(fallback_url, headers=headers, timeout=10)
                     
-            except requests.exceptions.JSONDecodeError:
-                st.error("❌ واجه السيرفر نظام حماية مؤقت من تيك توك. يرجى الانتظار دقيقة والمحاولة مجدداً.")
+                    if fallback_resp.status_code == 200:
+                        fb_data = fallback_resp.json()
+                        if fb_data and "user" in fb_data:
+                            st.success("✅ تم جلب البيانات عبر الخادم الاحتياطي!")
+                            u = fb_data["user"]
+                            st.info(f"📢 **عدد المتابعين:** {u.get('followers', 0):,}")
+                            st.info(f"❤️ **إجمالي الإعجابات:** {u.get('likes', 0):,}")
+                            st.info(f"🎬 **عدد الفيديوهات:** {u.get('videos', 0):,}")
+                        else:
+                            st.error("❌ عذراً، الحساب لم يستجب. يرجى التأكد من الاسم.")
+                    else:
+                        st.error(f"⚠️ واجه الموقع نظام حماية تيك توك الصارم (كود الحظر: {response.status_code}). جرب كتابة اسم حساب آخر.")
+                        
             except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال بالخادم: {e}")
+                st.error(f"حدث خطأ أثناء معالجة البيانات الفنية: {e}")
     else:
         st.warning("⚠️ يرجى كتابة اسم المستخدم أولاً!")
 
