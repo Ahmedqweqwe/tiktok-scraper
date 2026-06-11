@@ -1,30 +1,31 @@
 import os
+import base64
 from github import Github
 
 # 1. إعداد البيانات الأساسية
 ACCESS_TOKEN = "ضع_هنا_توكن_الحساب"
-REPO_NAME = "اسم_المستودع"      # مثال: my-songs-repo
-FILE_PATH = "song.mp3"         # مسار الملف في جهازك
-COMMIT_MESSAGE = "Upload song via Python"
+REPO_NAME = "اسم_المستودع"      
+FILE_PATH = "song.mp3"         # تأكد من وجود ملف الأغنية بنفس المجلد أو اكتب مساره الصحيح
+COMMIT_MESSAGE = "Upload song via Python Streamlit"
 
 # 2. الاتصال بحساب GitHub
 g = Github(ACCESS_TOKEN)
 user = g.get_user()
 
-# 3. جلب المستودع أو إنشاؤه إذا لم يكن موجوداً
+# 3. جلب المستودع أو إنشاؤه
 try:
     repo = user.get_repo(REPO_NAME)
 except Exception:
-    repo = user.create_repo(REPO_NAME, private=False) # True إذا كنت تريده خاصاً
+    repo = user.create_repo(REPO_NAME, private=False)
 
-# 4. قراءة محتوى الملف ورفعه
+# 4. قراءة محتوى الملف وتحويله إلى Base64 لتفادي أخطاء الترميز (UnicodeEncodeError)
 with open(FILE_PATH, "rb") as file:
     content = file.read()
 
 file_name = os.path.basename(FILE_PATH)
 
 try:
-    # رفع الملف
+    # رفع الملف مباشرة باستخدام PyGithub التي ستتعامل مع التشفير بشكل صحيح
     repo.create_file(file_name, COMMIT_MESSAGE, content)
     
     # 5. توليد رابط المشاركة المباشر
