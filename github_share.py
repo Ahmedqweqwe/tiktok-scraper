@@ -1,36 +1,51 @@
 import os
-import base64
+import streamlit as st
 from github import Github
 
-# 1. إعداد البيانات الأساسية
-ACCESS_TOKEN = "ضع_هنا_توكن_الحساب"
-REPO_NAME = "اسم_المستودع"      
-FILE_PATH = "song.mp3"         # تأكد من وجود ملف الأغنية بنفس المجلد أو اكتب مساره الصحيح
-COMMIT_MESSAGE = "Upload song via Python Streamlit"
+st.title("مستخرج ومشارك الأغاني")
 
-# 2. الاتصال بحساب GitHub
-g = Github(ACCESS_TOKEN)
-user = g.get_user()
-
-# 3. جلب المستودع أو إنشاؤه
+# 1. جلب التوكن من إعدادات سريمتليت الآمنة
+# تأكد أنك قمت بكتابة التوكن في الـ Secrets باسم github_token
 try:
-    repo = user.get_repo(REPO_NAME)
+    ACCESS_TOKEN = st.secrets["github_token"]
 except Exception:
-    repo = user.create_repo(REPO_NAME, private=False)
+    st.error("خطأ: لم يتم العثور على رمز الوصول (Token) في إعدادات Secrets.")
+    st.stop()
 
-# 4. قراءة محتوى الملف وتحويله إلى Base64 لتفادي أخطاء الترميز (UnicodeEncodeError)
-with open(FILE_PATH, "rb") as file:
-    content = file.read()
+REPO_NAME = "tiktok-scraper"       # اسم المستودع الخاص بك
+FILE_PATH = "song.mp3"             # اسم ملف الأغنية الناتجة
+COMMIT_MESSAGE = "Upload audio file via Streamlit"
 
-file_name = os.path.basename(FILE_PATH)
-
-try:
-    # رفع الملف مباشرة باستخدام PyGithub التي ستتعامل مع التشفير بشكل صحيح
-    repo.create_file(file_name, COMMIT_MESSAGE, content)
+# زر لتشغيل عملية الرفع
+if st.button("رفع الأغنية ومشاركتها"):
     
-    # 5. توليد رابط المشاركة المباشر
-    share_url = f"https://github.com{user.login}/{REPO_NAME}/blob/main/{file_name}"
-    print(f"تم الرفع بنجاح! رابط المشاركة هو:\n{share_url}")
-
-except Exception as e:
-    print(f"حدث خطأ أثناء الرفع: {e}")
+    if not os.path.exists(FILE_PATH):
+        st.error(f"الملف {FILE_PATH} غير موجود حالياً، تأكد من توليده أولاً.")
+    else:
+        with st.spinner("جاري الرفع إلى GitHub..."):
+            try:
+                # تنظيف التوكن من أي مسافات زائدة
+                g = Github(ACCESS_TOKEN.strip())
+                user = g.get_user()
+                repo = user.get_repo(REPO_NAME)
+                
+                # قراءة الملف بصيغة بايتس ثنائية
+                with open(FILE_PATH, "rb") as file:
+                    content = file.read()
+                
+                # رفع الملف أو تحديثه إذا كان موجوداً مسبقاً
+                try:
+                    contents = repo.get_contents(FILE_PATH)
+                    repo.update_file(contents.path, COMMIT_MESSAGE, content, contents.sha)
+                except Exception:
+                    repo.create_file(FILE_PATH, COMMIT_MESSAGE, content)
+                
+                # رابط المشاركة المباشر للأغنية
+                share_url = f"https://github.com{user.login}/{REPO_NAME}/blob/main/{FILE_PATH}"
+                
+                st.success("تم الرفع بنجاح!")
+                st.write(f"رابط مشاركة الأغنية:")
+                st.code(share_url)
+                
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء الرفع: {e}")
